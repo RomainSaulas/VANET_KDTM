@@ -31,6 +31,10 @@ QueueEntry::QueueEntry (Vector position, Time backofftime,
 
 
 /// Queue
+Queue::Queue ()
+{
+}
+
 void
 Queue::Add (QueueEntry entry)
 {
@@ -60,6 +64,16 @@ Queue::Find (uint32_t messageId, uint32_t prevId)
 		}
 		return false;
 }
+
+bool 
+Queue::Exist (uint32_t messageId)
+{
+	if (m_queue.find (messageId) != m_queue.end ())
+		return true;
+
+	return false;
+}
+
 
 Vector 
 Queue::CalculateSpatialDist (uint32_t setId)

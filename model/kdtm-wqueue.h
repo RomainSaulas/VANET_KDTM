@@ -129,6 +129,7 @@ class Queue
 {
 public:
 	/// Callback <Packet, nodeId>
+	Queue ();
 
 	Queue(uint32_t maxLen, Time queueTimeOut)
 		: m_maxLen (maxLen),
@@ -144,6 +145,9 @@ public:
 
 	/// Find if entry already in queue
 	bool Find (uint32_t messageId, uint32_t prevId);
+
+	/// Find if entry exist
+	bool Exist (uint32_t messageId);
 
 	/// Calculate Spatial Distribution
 	Vector CalculateSpatialDist (uint32_t setId);

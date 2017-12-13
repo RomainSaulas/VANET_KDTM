@@ -114,7 +114,6 @@ HelloHeader::HelloHeader (uint32_t id,
 	uint64_t originPosy, 
 	uint64_t speedx, 
 	uint64_t speedy, 
-	uint64_t time,
 	uint64_t trajectoryBegin,
 	uint64_t beta)
   : m_id (id),
@@ -122,7 +121,6 @@ HelloHeader::HelloHeader (uint32_t id,
     m_originPosy (originPosy),
     m_speedx (speedx),
     m_speedy (speedy),
-    m_time (time),
     m_trajectoryBegin (trajectoryBegin),
     m_beta (beta)
 {
@@ -149,7 +147,7 @@ HelloHeader::GetInstanceTypeId () const
 uint32_t
 HelloHeader::GetSerializedSize () const
 {
-  return 60;
+  return 52;
 }
 
 void
@@ -160,7 +158,6 @@ HelloHeader::Serialize (Buffer::Iterator i) const
    							<< " Y " << m_originPosy 
    							<< " Speed X " << m_speedx
    							<< " Speed Y " << m_speedy
-   							<< " Time " << m_time
    							<< " Trajectory Begin Time " << m_trajectoryBegin
   							<< " Beta " << m_beta);
 
@@ -169,7 +166,6 @@ HelloHeader::Serialize (Buffer::Iterator i) const
   i.WriteHtonU64 (m_originPosy);
   i.WriteHtonU64 (m_speedx);
   i.WriteHtonU64 (m_speedy);
-  i.WriteHtonU64 (m_time);
   i.WriteHtonU64 (m_trajectoryBegin);
   i.WriteHtonU64 (m_beta);
 }
@@ -185,7 +181,6 @@ HelloHeader::Deserialize (Buffer::Iterator start)
   m_originPosy = i.ReadNtohU64 ();
   m_speedx = i.ReadNtohU64 ();
   m_speedy = i.ReadNtohU64 ();
-  m_time = i.ReadNtohU64 ();
   m_trajectoryBegin = i.ReadNtohU64 ();
   m_beta = i.ReadNtohU64 ();
 
@@ -194,7 +189,6 @@ HelloHeader::Deserialize (Buffer::Iterator start)
   							<< " Y " << m_originPosy
   							<< " Speed X " << m_speedx
   							<< " Speed Y " << m_speedy
-  							<< " Time " << m_time
   							<< " Trajectory Begin Time " << m_trajectoryBegin
   							<< " Beta " << m_beta);
 
@@ -211,7 +205,6 @@ HelloHeader::Print (std::ostream &os) const
 		 << " Y " << m_originPosy 
 		 << " Speed X " << m_speedx
  		 << " Speed Y " << m_speedy
- 		 << " Time " << m_time
  		 << " Trajectory Begin Time " << m_trajectoryBegin
 		 << " Beta " << m_beta;
 }
@@ -233,7 +226,6 @@ HelloHeader::operator== (HelloHeader const & o) const
   				m_originPosy == o.m_originPosy &&
   				m_speedx == o.m_speedx &&
   				m_speedy == o.m_speedy &&
-  				m_time == o.m_time &&
   				m_trajectoryBegin == o.m_trajectoryBegin &&
   				m_beta == o.m_beta);
 }

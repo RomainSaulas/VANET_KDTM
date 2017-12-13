@@ -26,6 +26,7 @@ class PositionTable
 {
 public:
   /// c-tor
+  PositionTable ();
   PositionTable (double maxRange, Vector position, Vector velocity);
 
   /**
@@ -146,11 +147,13 @@ public:
     m_alpha = alpha;
   }
 
-  void Print (std::ostream & os) const;
+  void Print (std::ostream & os);
+
+  double CalculateDegree (Time time);
 
 private:
   Time m_entryLifeTime;
-  //  map: node Id  <Postion, velocity, time_from, Time_to, Betaj, tj>
+  //  map: node Id  <Position, velocity, time_from, Time_to, Betaj, tj>
   std::map<uint32_t, std::tuple<Vector, Vector, Time, Time, double, Time>> m_table;
   // TX error callback
   Callback<void, WifiMacHeader const &> m_txErrorCallback;
@@ -181,12 +184,10 @@ private:
   double CalculateStability (double time, double tj, double Betaj);
   /// Calculate degree of liason ij: Degij(t)
   double CalculateDoubleSigmoid (double t_from, double t_to, double t);
-  double CalculateDegree ();
-
 
 };
 
-std::ostream & operator<< (std::ostream & os, PositionTable const & h);
+std::ostream & operator<< (std::ostream & os, PositionTable & h);
 
 } // kdtm
 } // ns3

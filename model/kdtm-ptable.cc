@@ -13,8 +13,14 @@ namespace kdtm {
 /*
   kdtm position table
 */
+PositionTable::PositionTable ()
+{
+}
+
 PositionTable::PositionTable (double maxRange, Vector position, Vector velocity)
 {
+  NS_LOG_INFO (" Kdtm table constructor ");
+
   m_txErrorCallback = MakeCallback (&PositionTable::ProcessTxError, this);
   m_entryLifeTime = Seconds (25); //FIXME fix parameter to hello message timer
   
@@ -23,16 +29,9 @@ PositionTable::PositionTable (double maxRange, Vector position, Vector velocity)
   m_myPosition = position;
   m_myVelocity = velocity;
 
-  m_poissonCoeff = std::make_pair(1,15.0);
+  m_poissonCoeff = std::make_pair(1,300.0);
 
   m_alpha = 10.0;
-}
-
-Time 
-PositionTable::GetEntryUpdateTime (uint32_t id)
-{
-  std::map<uint32_t, std::tuple<Vector, Vector, Time, Time, double, Time> >::iterator i = m_table.find (id);
-  return std::get<3> (i->second);
 }
 
 /**
@@ -56,6 +55,7 @@ PositionTable::AddEntry (uint32_t id, Vector position, Vector velocity, Time tim
                           times_from_to.second,
                           Betaj,
                           tj)));
+
 }
 
 /**
@@ -111,6 +111,12 @@ PositionTable::isNeighbour (uint32_t id)
   return false;
 }
 
+Time 
+PositionTable::GetEntryUpdateTime (uint32_t id)
+{
+  std::map<uint32_t, std::tuple<Vector, Vector, Time, Time, double, Time> >::iterator i = m_table.find (id);
+  return std::get<3> (i->second);
+}
 
 /**
  * \brief remove entries with expired lifetime
@@ -188,6 +194,16 @@ PositionTable::HasPosition (uint32_t id)
 double 
 PositionTable::CalculateThreshold (Time time) 
 {
+  double kinetic_degree = CalculateDegree (time);
+
+  return 0.80 - 0.95 * exp(-0.06 * kinetic_degree);
+  //return kinetic_degree;
+
+}
+
+double 
+PositionTable::CalculateDegree (Time time)
+{
   Purge ();
   if (m_table.empty ())
     {
@@ -201,26 +217,42 @@ PositionTable::CalculateThreshold (Time time)
   std::map<uint32_t, std::tuple<Vector, Vector, Time, Time, double, Time>>::const_iterator i = m_table.begin ();
   for (; i != m_table.end (); i++)
     {
-      stability = CalculateStability (time.GetDouble (), 
+      stability = CalculateStability (time.GetSeconds (), 
                                       std::get<4> (i->second), 
-                                      std::get<5> (i->second).GetDouble ());
+                                      std::get<5> (i->second).GetSeconds ());
 
-      degree = CalculateDoubleSigmoid (std::get<2> (i->second).GetDouble (),
-                                       std::get<3> (i->second).GetDouble (),
-                                       time.GetDouble ());
+      NS_LOG_INFO (" Time: " << time
+        << " Beta i: " << 1/m_poissonCoeff.second
+        << " Beta j: " << std::get<4> (i->second)
+        << " ti: " << m_trajectoryBegin
+        << " tj: " << std::get<5> (i->second)
+        << " Stability: " << stability);
+
+      degree = CalculateDoubleSigmoid (std::get<2> (i->second).GetSeconds (),
+                                       std::get<3> (i->second).GetSeconds (),
+                                       time.GetSeconds ());
+
+      NS_LOG_INFO (" Degree: " << degree);
+
       kinetic_degree += stability * degree;
     }
 
-  return 0.86 - 0.95 * exp(-0.13 * kinetic_degree);
+  NS_LOG_INFO (" Kinetic Degree: " << kinetic_degree);
+
+  return kinetic_degree;
 }
 
+
 void 
-PositionTable::Print (std::ostream & os) const
+PositionTable::Print (std::ostream & os)
 {
+  Purge ();
   std::map<uint32_t, std::tuple<Vector, Vector, Time, Time, double, Time>>::const_iterator i = m_table.begin ();
   while (i != m_table.end ())
     {
-      os << "\n id : " << i->first;
+      os << "\n id : " << i->first 
+      << " time arrived " << std::get<2> (i->second).GetSeconds ()
+      << " time before leave " << std::get<3> (i->second).GetSeconds ();
       i++;
     }
 }
@@ -262,21 +294,27 @@ PositionTable::CalculateTimeFromTo (Time time, Vector position, Vector velocity)
   double from;
   double to;
 
+  // Time infinity must be > to simulation time
+  double infinity =  500.0;
+
   if (Aij == 0) 
     {
       if (Bij == 0)
         {
-          NS_LOG_INFO (" Aij: " << Aij << " Bij: " << Bij << " Cij: " << Cij);
-          NS_LOG_INFO (" Time from: " << Seconds (0.0) << " Time to: " << m_entryLifeTime);
+          //NS_LOG_INFO (" Aij: " << Aij << " Bij: " << Bij << " Cij: " << Cij);
+          //NS_LOG_INFO (" Time from: " << Seconds (0.0) << " Time to: " << Seconds (500));
 
-          return std::make_pair (time, time + m_entryLifeTime);
+          return std::make_pair (time, Seconds (infinity));
         }
 
       from = - (Cij - pow (m_maxRange, 2)) / Bij;
       to = - (Cij - pow (m_maxRange, 2)) / Bij;
 
-      NS_LOG_INFO (" Aij: " << Aij << " Bij: " << Bij << " Cij: " << Cij);
-      NS_LOG_INFO (" Time from: " << from << " Time to: " << to);
+      //NS_LOG_INFO (" Aij: " << Aij << " Bij: " << Bij << " Cij: " << Cij);
+      //NS_LOG_INFO (" Time from: " << from << " Time to: " << to);
+
+      NS_LOG_INFO ("aij = bij = 0, t_from " <<  (time.GetSeconds () + from) 
+        << " t_to " <<  (time.GetSeconds () + to));
 
       return std::make_pair (time + Seconds (from), time + Seconds (to));
     }
@@ -286,7 +324,15 @@ PositionTable::CalculateTimeFromTo (Time time, Vector position, Vector velocity)
   if (delta > 0)
     {
       from = (- Bij - sqrt (delta)) / (2 * Aij);
-      to = (- Bij + sqrt (delta)) / (2 * Aij);
+      if (from > 0)
+        {
+          to = from;
+          from = (- Bij + sqrt (delta)) / (2 * Aij);
+        }
+      else 
+        {
+          to = (- Bij + sqrt (delta)) / (2 * Aij);
+        }
     }
   if (delta == 0)
     {
@@ -297,13 +343,19 @@ PositionTable::CalculateTimeFromTo (Time time, Vector position, Vector velocity)
   if (delta < 0)
     {
       from = 0;
-      to = 0;
+      to = infinity;
     }
 
-  NS_LOG_INFO (" Aij: " << Aij << " Bij: " << Bij << " Cij: " << Cij);
-  NS_LOG_INFO (" Time from: " << from << " Time to: " << to);
+  if (time.GetSeconds () + from < 0)
+    {
+      from = -(time.GetSeconds ());
+    }
 
-  return std::make_pair (time + Seconds (from), time + Seconds (to));
+    NS_LOG_INFO (" t_from " << (time.GetSeconds () + from) 
+      << " t_to " << (time.GetSeconds () + to));
+
+  return std::make_pair (Seconds (time.GetSeconds () + from), 
+                         Seconds (time.GetSeconds () + to));
 }
 
 
@@ -321,7 +373,14 @@ double
 PositionTable::CalculateStability (double time, double tj, double Betaj)
 {
   double Betai = 1.0 / m_poissonCoeff.second;
-  double ti = m_trajectoryBegin.GetDouble ();
+  double ti = m_trajectoryBegin.GetSeconds ();
+
+  if (Betaj == 0.0 && Betai == 0.0)
+    {
+      return 1;
+    } 
+
+  NS_LOG_INFO (" Betai + Betaj: " << Betai);
 
   return exp (-(Betai + Betaj)*(time - ((ti*Betai + tj*Betaj)/(Betai + Betaj))));
 }
@@ -331,7 +390,7 @@ PositionTable::CalculateStability (double time, double tj, double Betaj)
 /// Opreators
 //{
 
-std::ostream & operator<< (std::ostream & os, PositionTable const & h)
+std::ostream & operator<< (std::ostream & os, PositionTable & h)
 {
   h.Print(os);
   return os;

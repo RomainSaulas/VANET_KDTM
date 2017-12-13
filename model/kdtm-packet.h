@@ -79,7 +79,6 @@ public:
   						 uint64_t originPosy = 0,
   						 uint64_t speedx = 0,
   						 uint64_t speedy = 0,
-  						 uint64_t time = 0,
   						 uint64_t trajectoryBegin = 0,
   						 uint64_t beta = 0);
 
@@ -135,14 +134,6 @@ public:
 	{
 		return m_speedy;
 	}
-	void SetTime (uint64_t time) 
-	{
-		m_time = time;
-	}
-	uint64_t GetTime () const
-	{
-		return m_time;
-	}
 	void SetTrajectoryBegin (uint64_t trajectoryBegin) 
 	{
 		m_trajectoryBegin = trajectoryBegin;
@@ -172,8 +163,6 @@ private:
 
 	uint64_t m_speedx;
 	uint64_t m_speedy;
-
-	uint64_t m_time;
 
 	uint64_t m_trajectoryBegin; // time when its trajectory started
 	uint64_t m_beta;  // inverse of average time of trajectory => poisson coeff of stability; 
